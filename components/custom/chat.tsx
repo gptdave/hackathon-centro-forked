@@ -17,7 +17,6 @@ import { Message as PreviewMessage } from "@/components/custom/message";
 import { Sidebar } from "@/components/custom/sidebar";
 import { useScrollToBottom } from "@/components/custom/use-scroll-to-bottom";
 import { useChatContext } from "@/contexts/ChatContext";
-
 import { MultimodalInput } from "./multimodal-input";
 import { Button } from "@/components/ui/button";
 
@@ -47,34 +46,23 @@ export function Chat({
     tamanoTicketPromedio: searchParams?.get("tamanoTicketPromedio") || "",
   };
 
-  const { messages, handleSubmit, input, setInput, append, isLoading, stop } =
-    useChat({
-      body: { id, formData },
-      initialMessages,
-      onFinish: () => {
-        window.history.replaceState({}, "", `/chat/${id}`);
-      },
-    });
+  const { messages, handleSubmit, input, setInput, append, isLoading, stop } = useChat({
+    body: { id, formData },
+    initialMessages,
+    onFinish: () => {
+      window.history.replaceState({}, "", `/chat/${id}`);
+    },
+  });
 
-  const [messagesContainerRef, messagesEndRef] =
-    useScrollToBottom<HTMLDivElement>();
+  const [messagesContainerRef, messagesEndRef] = useScrollToBottom<HTMLDivElement>();
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
 
-  const {
-    steps,
-    currentStepIndex,
-    updateStep,
-    moveToNextStep,
-    allStepsCompleted,
-  } = useChatContext();
+  const { steps, currentStepIndex, updateStep, moveToNextStep, allStepsCompleted } = useChatContext();
 
-  const [localMessages, setLocalMessages] =
-    useState<Array<Message>>(initialMessages);
-
+  const [localMessages, setLocalMessages] = useState<Array<Message>>(initialMessages);
   const [reportContent, setReportContent] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
-
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
@@ -103,7 +91,6 @@ export function Chat({
           response: step.response,
         })),
       });
-
       setReportContent(response.data.analysis);
       setShowReport(true);
     } catch (error) {
@@ -151,7 +138,7 @@ export function Chat({
   const markdownComponents = {
     code({ inline, className, children }) {
       const match = /language-(\w+)/.exec(className || '');
-      
+      // @ts-ignore
       return !inline && match ? (
         <Prism
           language={match[1]}
@@ -173,12 +160,8 @@ export function Chat({
           <div className="grow flex items-center justify-center">
             <div className="text-center">
               <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4" />
-              <p className="text-lg font-semibold">
-                Analizando la información...
-              </p>
-              <p className="text-sm text-gray-500">
-                Esto puede tomar unos minutos
-              </p>
+              <p className="text-lg font-semibold">Analizando la información...</p>
+              <p className="text-sm text-gray-500">Esto puede tomar unos minutos</p>
             </div>
           </div>
         ) : showReport ? (
@@ -209,16 +192,9 @@ export function Chat({
                   toolInvocations={message.toolInvocations}
                 />
               ))}
-              <div
-                ref={messagesEndRef}
-                className="shrink-0 min-w-[24px] min-h-[24px]"
-              />
+              <div ref={messagesEndRef} className="shrink-0 min-w-[24px] min-h-[24px]"/>
             </div>
-
-            <form
-              className="w-full max-w-3xl mx-auto px-4"
-              onSubmit={handleQuestionSubmit}
-            >
+            <form className="w-full max-w-3xl mx-auto px-4" onSubmit={handleQuestionSubmit}>
               <MultimodalInput
                 input={input}
                 setInput={setInput}
