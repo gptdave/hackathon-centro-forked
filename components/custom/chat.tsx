@@ -6,8 +6,8 @@ import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { Prism } from "react-syntax-highlighter";
+import { dracula } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -22,7 +22,6 @@ import { MultimodalInput } from "./multimodal-input";
 import { Button } from "@/components/ui/button";
 
 type CodeComponentProps = {
-  node?: any;
   inline?: boolean;
   className?: string;
   children: React.ReactNode;
@@ -150,25 +149,20 @@ export function Chat({
   };
 
   const markdownComponents = {
-    code: ({ node, inline, className, children, ...props }: CodeComponentProps) => {
+    code({ inline, className, children }) {
       const match = /language-(\w+)/.exec(className || '');
+      
       return !inline && match ? (
-        <SyntaxHighlighter
-          {...props}
-          style={vscDarkPlus as any}
+        <Prism
           language={match[1]}
+          style={dracula}
           PreTag="div"
-          wrapLines={true}
-          wrapLongLines={true}
-        >
-          {String(children).replace(/\n$/, '')}
-        </SyntaxHighlighter>
+          children={String(children).replace(/\n$/, '')}
+        />
       ) : (
-        <code className={className} {...props}>
-          {children}
-        </code>
+        <code className={className}>{children}</code>
       );
-    },
+    }
   };
 
   return (
