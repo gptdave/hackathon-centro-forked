@@ -6,8 +6,8 @@ import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -154,15 +154,12 @@ export function Chat({
       const match = /language-(\w+)/.exec(className || '');
       return !inline && match ? (
         <SyntaxHighlighter
-          style={oneDark}
+          {...props}
+          style={vscDarkPlus as any}
           language={match[1]}
           PreTag="div"
-          customStyle={{
-            margin: '0.5em 0',
-            padding: '1em',
-            borderRadius: '0.375rem',
-          }}
-          {...props}
+          wrapLines={true}
+          wrapLongLines={true}
         >
           {String(children).replace(/\n$/, '')}
         </SyntaxHighlighter>
