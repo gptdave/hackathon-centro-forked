@@ -5,12 +5,13 @@ import { useChat } from "ai/react";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import ReactMarkdown, { Components } from "react-markdown";
+import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { ComponentProps } from "react";
 
 import { Message as PreviewMessage } from "@/components/custom/message";
 import { Sidebar } from "@/components/custom/sidebar";
@@ -19,6 +20,13 @@ import { useChatContext } from "@/contexts/ChatContext";
 
 import { MultimodalInput } from "./multimodal-input";
 import { Button } from "@/components/ui/button";
+
+type CodeComponentProps = {
+  node?: any;
+  inline?: boolean;
+  className?: string;
+  children: React.ReactNode;
+} & ComponentProps<'code'>;
 
 export function Chat({
   id,
@@ -39,7 +47,7 @@ export function Chat({
     ingresosMensuales: searchParams?.get("ingresosMensuales") || "",
     tamanoTicketPromedio: searchParams?.get("tamanoTicketPromedio") || "",
   };
-  
+
   const { messages, handleSubmit, input, setInput, append, isLoading, stop } =
     useChat({
       body: { id, formData },
@@ -83,7 +91,7 @@ export function Chat({
         },
       ]);
     }
-  }, [currentStepIndex, allStepsCompleted]);
+  }, [currentStepIndex, allStepsCompleted, steps]);
 
   const handleAnalysis = async () => {
     try {
@@ -141,9 +149,9 @@ export function Chat({
     setShowReport(!showReport);
   };
 
-  const components: Components = {
-    code({ node, inline, className, children, ...props }) {
-      const match = /language-(\w+)/.exec(className || "");
+  const markdownComponents = {
+    code: ({ node, inline, className, children, ...props }: CodeComponentProps) => {
+      const match = /language-(\w+)/.exec(className || '');
       return !inline && match ? (
         <SyntaxHighlighter
           style={atomDark}
@@ -151,7 +159,7 @@ export function Chat({
           PreTag="div"
           {...props}
         >
-          {String(children).replace(/\n$/, "")}
+          {String(children).replace(/\n$/, '')}
         </SyntaxHighlighter>
       ) : (
         <code className={className} {...props}>
@@ -184,7 +192,7 @@ export function Chat({
             </Button>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              components={components}
+              components={markdownComponents}
               className="prose prose-lg prose-invert max-w-none prose-headings:text-blue-400 prose-a:text-blue-300 prose-strong:text-gray-300 prose-ul:list-disc prose-ol:list-decimal"
             >
               {reportContent || ""}
