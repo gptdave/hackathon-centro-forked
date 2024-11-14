@@ -4,7 +4,7 @@ import { Attachment, Message } from "ai";
 import { useChat } from "ai/react";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, HTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -19,6 +19,13 @@ import { useChatContext } from "@/contexts/ChatContext";
 
 import { MultimodalInput } from "./multimodal-input";
 import { Button } from "@/components/ui/button";
+
+// Define CodeProps type with optional inline property
+type CodeProps = HTMLAttributes<HTMLElement> & {
+  inline?: boolean;
+  className?: string;
+  children: React.ReactNode;
+};
 
 export function Chat({
   id,
@@ -164,7 +171,7 @@ export function Chat({
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                code({ node, inline, className, children, ...props }) {
+                code({ node, inline = false, className, children, ...props }: CodeProps) {
                   const match = /language-(\w+)/.exec(className || "");
                   return !inline && match ? (
                     <SyntaxHighlighter
