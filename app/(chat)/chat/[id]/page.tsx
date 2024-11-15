@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from 'react';
 import { Message } from 'ai';
 import { MultimodalInput } from "@/components/custom/chat";
