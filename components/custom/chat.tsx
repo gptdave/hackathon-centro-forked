@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import type { SyntaxHighlighterProps } from 'react-syntax-highlighter';
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -164,19 +165,21 @@ export function Chat({
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                code({ node, className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || "");
+                code(props) {
+                  const { className, children, ...rest } = props;
+                  const match = /language-(\w+)/.exec(className || '');
                   return match ? (
                     <SyntaxHighlighter
+                      // @ts-ignore
                       style={atomDark}
                       language={match[1]}
                       PreTag="div"
-                      {...props}
+                      {...rest}
                     >
-                      {String(children).replace(/\n$/, "")}
+                      {String(children).replace(/\n$/, '')}
                     </SyntaxHighlighter>
                   ) : (
-                    <code className={className} {...props}>
+                    <code className={className} {...rest}>
                       {children}
                     </code>
                   );
