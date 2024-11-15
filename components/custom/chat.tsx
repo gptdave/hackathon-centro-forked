@@ -1,5 +1,5 @@
 "use client";
-import { MultimodalInput } from "@/components/custom/chat";
+
 import { ChangeEvent, useCallback, useRef } from "react";
 import { Paperclip, Send, StopCircle } from "lucide-react";
 import { Attachment, Message } from "ai";
