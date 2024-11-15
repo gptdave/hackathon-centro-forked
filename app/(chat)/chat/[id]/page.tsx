@@ -1,4 +1,4 @@
-import { Chat } from "@/components/custom/chat";
+import { MultimodalInput } from "@/components/custom/chat";
 
 export default function ChatPage({
   params,
