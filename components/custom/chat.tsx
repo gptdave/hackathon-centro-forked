@@ -27,7 +27,7 @@ interface MultimodalInputProps {
   append: (message: Message) => void;
 }
 
-export function Chat({
+export function MultimodalInput({
   input,
   setInput,
   handleSubmit,
