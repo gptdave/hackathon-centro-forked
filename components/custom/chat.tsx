@@ -1,17 +1,31 @@
+"use client";
+
 import { ChangeEvent, useCallback, useRef } from "react";
 import { Paperclip, Send, StopCircle } from "lucide-react";
-import { Message } from "ai";
+import { Attachment, Message } from "ai";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../ui/textarea";
 
-// Definimos el tipo para las acciones sugeridas
+// Agregamos el tipo explícito
 interface SuggestedAction {
   label: string;
   action: () => void;
 }
 
 const suggestedActions: SuggestedAction[] = [];
+
+interface MultimodalInputProps {
+  input: string;
+  setInput: (value: string) => void;
+  handleSubmit: (event?: { preventDefault?: () => void }, chatRequestOptions?: any) => Promise<void>;
+  isLoading: boolean;
+  stop: () => void;
+  attachments: Array<Attachment>;
+  setAttachments: (attachments: Array<Attachment>) => void;
+  messages: Array<Message>;
+  append: (message: Message) => void;
+}
 
 export function MultimodalInput({
   input,
@@ -23,17 +37,7 @@ export function MultimodalInput({
   setAttachments,
   messages,
   append,
-}: {
-  input: string;
-  setInput: (value: string) => void;
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
-  isLoading: boolean;
-  stop: () => void;
-  attachments: any[];
-  setAttachments: (attachments: any[]) => void;
-  messages: Message[];
-  append: (message: Message) => void;
-}) {
+}: MultimodalInputProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const handleKeyDown = useCallback(
@@ -52,7 +56,13 @@ export function MultimodalInput({
   const handleFileChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       if (e.target.files?.length) {
-        setAttachments(Array.from(e.target.files));
+        const filesArray = Array.from(e.target.files).map(file => ({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          file: file
+        })) as Array<Attachment>;
+        setAttachments(filesArray);
       }
     },
     [setAttachments]
@@ -116,7 +126,14 @@ export function MultimodalInput({
             Detener generación
           </Button>
         )}
-        <Button type="submit" disabled={input.trim().length === 0}>
+        <Button 
+          type="submit" 
+          disabled={input.trim().length === 0}
+          onClick={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
           <Send className="mr-2 h-4 w-4" />
           Enviar mensaje
         </Button>
