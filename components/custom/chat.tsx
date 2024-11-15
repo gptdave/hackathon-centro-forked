@@ -1,248 +1,143 @@
 "use client";
 
-import { Attachment, Message, ChatRequestOptions } from "ai";
-import { useChat } from "ai/react";
-import axios from "axios";
-import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import type { SyntaxHighlighterProps } from 'react-syntax-highlighter';
-import remarkGfm from "remark-gfm";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { ChangeEvent, useCallback, useRef } from "react";
+import { Paperclip, Send, StopCircle } from "lucide-react";
+import { Attachment, Message } from "ai";
 
-import { Message as PreviewMessage } from "@/components/custom/message";
-import { Sidebar } from "@/components/custom/sidebar";
-import { useScrollToBottom } from "@/components/custom/use-scroll-to-bottom";
-import { useChatContext } from "@/contexts/ChatContext";
-
-import { MultimodalInput } from "./multimodal-input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "../ui/textarea";
 
-export function Chat({
- id,
- initialMessages,
- formData,
-}: {
- id: string;
- initialMessages: Array<Message>;
- formData: Record<string, string>;
-}) {
- const searchParams = useSearchParams();
- const companyInfo = {
-   marca: searchParams?.get("marca") || "",
-   industria: searchParams?.get("industria") || "",
-   numEmpleados: searchParams?.get("numEmpleados") || "",
-   anosEnMercado: searchParams?.get("anosEnMercado") || "",
-   productoMasVendido: searchParams?.get("productoMasVendido") || "",
-   ingresosMensuales: searchParams?.get("ingresosMensuales") || "",
-   tamanoTicketPromedio: searchParams?.get("tamanoTicketPromedio") || "",
- };
- const { messages, handleSubmit, input, setInput, append, isLoading, stop } =
-   useChat({
-     body: { id, formData },
-     initialMessages,
-     onFinish: () => {
-       window.history.replaceState({}, "", `/chat/${id}`);
-     },
-   });
+// Agregamos el tipo explícito
+interface SuggestedAction {
+  label: string;
+  action: () => void;
+}
 
- const [messagesContainerRef, messagesEndRef] =
-   useScrollToBottom<HTMLDivElement>();
+const suggestedActions: SuggestedAction[] = [];
 
- const [attachments, setAttachments] = useState<Array<Attachment>>([]);
+interface MultimodalInputProps {
+  input: string;
+  setInput: (value: string) => void;
+  handleSubmit: (event?: { preventDefault?: () => void }, chatRequestOptions?: any) => Promise<void>;
+  isLoading: boolean;
+  stop: () => void;
+  attachments: Array<Attachment>;
+  setAttachments: (attachments: Array<Attachment>) => void;
+  messages: Array<Message>;
+  append: (message: Message) => void;
+}
 
- const {
-   steps,
-   currentStepIndex,
-   updateStep,
-   moveToNextStep,
-   allStepsCompleted,
- } = useChatContext();
+export function MultimodalInput({
+  input,
+  setInput,
+  handleSubmit,
+  isLoading,
+  stop,
+  attachments,
+  setAttachments,
+  messages,
+  append,
+}: MultimodalInputProps) {
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
- const [localMessages, setLocalMessages] =
-   useState<Array<Message>>(initialMessages);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        const form = e.currentTarget.form;
+        if (form) {
+          form.dispatchEvent(new Event("submit", { cancelable: true }));
+        }
+      }
+    },
+    []
+  );
 
- const [reportContent, setReportContent] = useState<string | null>(null);
- const [showReport, setShowReport] = useState(false);
+  const handleFileChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files?.length) {
+        const filesArray = Array.from(e.target.files).map(file => ({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          file: file
+        })) as Array<Attachment>;
+        setAttachments(filesArray);
+      }
+    },
+    [setAttachments]
+  );
 
- const [isAnalyzing, setIsAnalyzing] = useState(false);
-
- useEffect(() => {
-   if (allStepsCompleted) {
-     handleAnalysis();
-   } else if (currentStepIndex < steps.length) {
-     setLocalMessages((prev) => [
-       ...prev,
-       {
-         id: `step-${currentStepIndex}`,
-         role: "assistant",
-         content: steps[currentStepIndex].question,
-       },
-     ]);
-   }
- }, [currentStepIndex, allStepsCompleted]);
-
- const handleAnalysis = async () => {
-   try {
-     setIsAnalyzing(true);
-     const response = await axios.post("/api/analyze", {
-       companyInfo: companyInfo,
-       steps: steps.map((step) => ({
-         title: step.title,
-         question: step.question,
-         response: step.response,
-       })),
-     });
-
-     setReportContent(response.data.analysis);
-     setShowReport(true);
-   } catch (error) {
-     console.error("Error submitting analysis:", error);
-     toast.error("Error submitting analysis. Please try again.");
-   } finally {
-     setIsAnalyzing(false);
-   }
- };
-
- const handleQuestionSubmit = async (
-   event?: { preventDefault?: () => void } | undefined,
-   chatRequestOptions?: ChatRequestOptions | undefined
- ) => {
-   event?.preventDefault?.();
-   if (!allStepsCompleted) {
-     const isValid = await updateStep(currentStepIndex, input);
-     if (isValid) {
-       setLocalMessages((prev) => [
-         ...prev,
-         { id: `response-${currentStepIndex}`, role: "user", content: input },
-       ]);
-       setInput("");
-       moveToNextStep();
-     } else {
-       toast.error(
-         "La respuesta no es adecuada para la pregunta. Intenta con una nueva respuesta :)",
-         {
-           style: {
-             color: "red",
-           },
-           duration: 4000,
-           closeButton: true,
-         }
-       );
-       setInput("");
-     }
-   }
-   if (allStepsCompleted) {
-     handleAnalysis();
-   }
- };
-
- const toggleView = () => {
-   setShowReport(!showReport);
- };
-
- return (
-   <div className="flex flex-row h-dvh bg-background">
-     <Sidebar />
-     <div className="grow flex flex-col justify-between pb-4 md:pb-8">
-       {isAnalyzing ? (
-         <div className="grow flex items-center justify-center">
-           <div className="text-center">
-             <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4" />
-             <p className="text-lg font-semibold">
-               Analizando la información...
-             </p>
-             <p className="text-sm text-gray-500">
-               Esto puede tomar unos minutos
-             </p>
-           </div>
-         </div>
-       ) : showReport ? (
-         <div className="grow overflow-y-auto w-full max-w-4xl mx-auto px-4 py-12 bg-black text-white shadow-lg rounded-lg">
-           <Button onClick={toggleView} className="mb-6" variant="outline">
-             Regresar al chat
-           </Button>
-           <ReactMarkdown
-             remarkPlugins={[remarkGfm]}
-             components={{
-               code(props) {
-                 const { className, children, ...rest } = props;
-                 const match = /language-(\w+)/.exec(className || '');
-                 return match ? (
-                   <SyntaxHighlighter
-                     // @ts-ignore
-                     style={atomDark}
-                     language={match[1]}
-                     PreTag="div"
-                     {...rest}
-                   >
-                     {String(children).replace(/\n$/, '')}
-                   </SyntaxHighlighter>
-                 ) : (
-                   <code className={className} {...rest}>
-                     {children}
-                   </code>
-                 );
-               },
-             }}
-             className="prose prose-lg prose-invert max-w-none prose-headings:text-blue-400 prose-a:text-blue-300 prose-strong:text-gray-300 prose-ul:list-disc prose-ol:list-decimal"
-           >
-             {reportContent || ""}
-           </ReactMarkdown>
-         </div>
-       ) : (
-         <>
-           <div
-             ref={messagesContainerRef}
-             className="grow overflow-y-auto flex flex-col gap-4 w-full max-w-3xl mx-auto px-4"
-           >
-             {localMessages.map((message) => (
-               <PreviewMessage
-                 key={message.id}
-                 role={message.role}
-                 content={message.content}
-                 attachments={message.experimental_attachments}
-                 toolInvocations={message.toolInvocations}
-               />
-             ))}
-             <div
-               ref={messagesEndRef}
-               className="shrink-0 min-w-[24px] min-h-[24px]"
-             />
-           </div>
-
-           <form
-             className="w-full max-w-3xl mx-auto px-4"
-             onSubmit={handleQuestionSubmit}
-           >
-             <MultimodalInput
-               input={input}
-               setInput={setInput}
-               handleSubmit={handleQuestionSubmit}
-               isLoading={isLoading}
-               stop={stop}
-               attachments={attachments}
-               setAttachments={setAttachments}
-               messages={localMessages}
-               append={append}
-             />
-           </form>
-         </>
-       )}
-       {reportContent && !showReport && !isAnalyzing && (
-         <div className="w-full max-w-3xl mx-auto px-4 mt-4">
-           <Button
-             onClick={toggleView}
-             className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-300 ease-in-out hover:scale-105"
-           >
-             Ver reporte completo
-           </Button>
-         </div>
-       )}
-     </div>
-   </div>
- );
+  return (
+    <div className="relative">
+      {attachments.length > 0 && (
+        <div className="flex gap-2 mb-2">
+          {attachments.map((file, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded bg-secondary p-2"
+            >
+              <span className="text-sm">{file.name}</span>
+              <button
+                onClick={() => {
+                  setAttachments(attachments.filter((_, j) => j !== i));
+                }}
+                className="text-sm hover:text-destructive"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="relative flex items-end w-full gap-2">
+        <Textarea
+          ref={inputRef}
+          tabIndex={0}
+          placeholder="Escribe tu mensaje..."
+          className="min-h-[60px] w-full p-4 pr-20 focus-visible:ring-1"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <div className="absolute right-4 bottom-4 flex gap-2">
+          <label className="cursor-pointer">
+            <Paperclip className="h-4 w-4" />
+            <input
+              type="file"
+              className="hidden"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
+            />
+          </label>
+        </div>
+      </div>
+      <div className="mt-2 flex gap-2 justify-end">
+        {isLoading && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              stop();
+              setInput("");
+            }}
+          >
+            <StopCircle className="mr-2 h-4 w-4" />
+            Detener generación
+          </Button>
+        )}
+        <Button 
+          type="submit" 
+          disabled={input.trim().length === 0}
+          onClick={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
+          <Send className="mr-2 h-4 w-4" />
+          Enviar mensaje
+        </Button>
+      </div>
+    </div>
+  );
 }
